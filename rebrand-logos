@@ -1,0 +1,103 @@
+#!/bin/bash
+# Andrew Oatley-Willis
+# Rebrand logos in linux distribution automatically
+
+
+# This script uses recursive delete, please be careful
+if [ "whoami" == "root" -o "$UID" == "0" ]; then
+  echo "Please do not run as root"
+  exit
+fi
+
+
+# Can use blank colour instead of providing a logo image
+# COLOUR=#4B0082
+
+# Configuration
+CURRENT_DIR=$(pwd)
+NEWLOGO=test.png
+OLD=centos-logos-70.0.6
+NEW=test-logos-70.0.6
+
+# Delete the entire new directory structure
+rm -rf ${NEW}
+
+# Make the entire new directory structure
+for dir in $(find centos-logos-70.0.6 -type d | perl -lne 'print tr:/::, " $_"' | sort -n | cut -d' ' -f2); do
+  newdir=$(echo ${dir} | sed "s/${OLD}/${NEW}/")
+  mkdir -p ${newdir}
+done
+
+
+# Scan each file in old directory and create a new file in the new directory
+for file in $(find ${OLD}); do 
+  
+  # Skip directories
+  if [ -d "${file}" ]; then
+    echo "DIRECTORY: ${file}"
+    continue
+  # This script only supports the following file types, below this is used to find newly added file types
+  elif [ "$(echo ${file} | grep -e 'png\|svg\|xpm\|jpg\|icns')" == "" ]; then
+    echo "MISSING FILE: ${file}"
+    continue
+  fi
+
+  read name image size depth <<<$(identify ${file} | sed 's/^\(.*\)\.\(.*\)\ .*\ \(.*x.*\)\ .*\ \(.*-bit\).*/\1 \2 \3 \4/')
+  newfile=$(echo ${file} | sed "s/${OLD}/${NEW}/")
+  echo "$file == $image $size $depth"
+  
+  # Can use blank colour instead of providing a logo image
+  # options="-size ${size} xc:${COLOUR}"
+  
+  options="-resize ${size} -gravity center -crop ${size}+0+0 +repage"
+
+
+  if [ "${depth}" == "8-bit" ]; then
+    options="${options} -colors 256 -depth 8"
+  elif [ "${depth}" == "16-bit" ]; then
+    options="${options} -depth 16"
+  fi
+  if [ "${depth}" == "8-bit" -a "${image}" == "png" ]; then
+    newfile="png8:${newfile}"
+  elif [ "${image}" == "icns" ]; then
+    options="${options} -colors 256 -depth 8 +dither"
+    newfile="png8:${newfile}"
+  fi
+
+  #echo "$newfile"
+  #continue
+
+  if [ "${image}" == "png" ]; then
+    echo "making png: ${NEWLOGO} ${newfile}"
+    convert ${NEWLOGO} ${options} ${newfile}
+  elif [ "${image}" == "jpg" ]; then
+    echo "making jpg: ${NEWLOGO} ${newfile}"
+    convert ${NEWLOGO} ${options} ${newfile}
+  elif [ "${image}" == "svg" ]; then
+    echo "making svg: ${NEWLOGO} ${newfile}"
+    convert ${NEWLOGO} ${options} ${newfile}
+  elif [ "${image}" == "icns" ]; then
+    echo "making icns: ${NEWLOGO} ${newfile}"
+    #convert ${newfile}.png
+    #convert ${newfile}.png ${options} ${newfile}1.png
+    #png2icns ${newfile} ${newfile}1.png
+    #rm ${newfile}1.png
+    #convert png8:${NEWLOGO}
+    convert png8:${NEWLOGO} ${options} ${newfile}1.png
+    png2icns ${newfile} ${newfile}1.png
+    rm ${newfile}1.png
+  elif [ "${image}" == "xpm" ]; then
+    echo "making xpm: ${newfile}"
+    convert ${NEWLOGO} ${options} ${newfile}
+  elif [ "${image}" == "gz" ]; then
+    echo "making xpm.gz: ${name}.gz"
+    convert ${NEWLOGO} ${options} ${name}
+    gzip ${name}
+  else
+    echo "unknown error: "
+    echo "${file}"
+    exit
+  fi
+  
+
+done
