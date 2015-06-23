@@ -1,6 +1,6 @@
 # linux-logos
-This is a small collection of tools used to quickly replace/rebrand a linux distribution.
-Rebrand a linux distribution's logo package with a custom logo:
+This is a small collection of tools used to quickly replace/rebrand a linux distribution with a custom logo of your choice.
+
 # Details
 1. Download a centos-logos, redhat-logos, or fedora-logos package(NOTE: scan logos only used the other logos packages for reading, it does not copy/use any copyright names or images from them)
 2. Extract the contents of package
